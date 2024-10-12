@@ -1,0 +1,136 @@
+" Usar espaços em vez de tabs
+set expandtab
+set tabstop=4
+set shiftwidth=4
+set noswapfile
+
+" Ativar numeração de linhas
+set number
+set relativenumber
+
+" Usar 256 cores
+set termguicolors
+
+" Ativar syntax highlight
+syntax on
+" Mapeia <Leader>w para salvar o arquivo
+nnoremap <Leader>w :w<CR>
+nnoremap <Leader>q :q!<CR>
+let mapleader = ","
+
+" Mostrar o status da linha
+set laststatus=2
+call plug#begin('~/.local/share/nvim/plugged')
+
+" LSP (Language Server Protocol) para autocompletar, etc.
+Plug 'neovim/nvim-lspconfig'
+" Autocompletar com nvim-cmp
+Plug 'hrsh7th/nvim-cmp'
+Plug 'hrsh7th/cmp-nvim-lsp'
+Plug 'hrsh7th/cmp-buffer'
+Plug 'hrsh7th/cmp-path'
+Plug 'hrsh7th/cmp-cmdline'
+Plug 'windwp/nvim-autopairs'
+" Snippets para autocompletar
+Plug 'L3MON4D3/LuaSnip'
+Plug 'navarasu/onedark.nvim'
+" Gerenciador de pacotes para Neovim
+Plug 'williamboman/mason.nvim'
+Plug 'williamboman/mason-lspconfig.nvim'
+
+" Pyright como LSP para Python
+Plug 'mfussenegger/nvim-dap'  " Depuração (opcional)
+Plug 'rcarriga/nvim-dap-ui'  " Interface de usuário para depuração
+
+" Linters e Formatadores
+Plug 'dense-analysis/ale'
+
+" Autoformatação de código
+Plug 'psf/black', {'branch': 'main'}
+
+call plug#end()
+lua << EOF
+local nvim_lsp = require('lspconfig')
+local cmp = require'cmp'
+
+-- Configuração básica do nvim-cmp
+cmp.setup({
+  snippet = {
+    expand = function(args)
+      require('luasnip').lsp_expand(args.body)
+    end,
+  },
+  mapping = {
+    ['<C-d>'] = cmp.mapping.scroll_docs(-4),
+    ['<C-f>'] = cmp.mapping.scroll_docs(4),
+    ['<C-Space>'] = cmp.mapping.complete(),
+    ['<CR>'] = cmp.mapping.confirm({ select = true }),
+  },
+  sources = {
+    { name = 'nvim_lsp' },
+    { name = 'buffer' },
+  }
+})
+
+-- Configurar Pyright como LSP para Python
+nvim_lsp.pyright.setup{}
+
+-- Configuração do Mason (gerenciamento de LSPs, DAPs, Linters, etc)
+require('mason').setup()
+require('mason-lspconfig').setup({
+    ensure_installed = { "pyright" }
+})
+EOF
+" Configurar ALE para Python
+let g:ale_linters = {
+\   'python': ['flake8', 'pylint'],
+\}
+
+" Usar Black para autoformatação
+let g:ale_fixers = {
+\   'python': ['black'],
+\}
+let g:ale_fix_on_save = 1
+lua << EOF
+local dap = require('dap')
+dap.adapters.python = {
+  type = 'executable';
+  command = 'python3';
+  args = { '-m', 'debugpy.adapter' };
+}
+
+dap.configurations.python = {
+  {
+    type = 'python';
+    request = 'launch';
+    name = "Launch file";
+    program = "${file}";
+    pythonPath = function()
+      return '/usr/bin/python3'  -- ou onde seu Python estiver instalado
+    end;
+  },
+}
+EOF
+lua << EOF
+require('nvim-autopairs').setup{}
+EOF
+lua << EOF
+require('onedark').setup {
+    style = 'deep',  -- outras opções: 'darker', 'cool', 'warm', 'warmer', 'deep', 'dark'
+    toggle_style_key = '<Leader>ts',  -- tecla para alternar o estilo
+    toggle_style_list = {'dark', 'light'},  -- estilos disponíveis
+    colors = {},  -- cores personalizadas (opcional)
+    highlights = {  -- destaques personalizados (opcional)
+        Comment = { fg = '#5b5b5b', italic = true },
+    },
+    diagnostics = {
+        darker = true,  -- tornar ícones de diagnóstico mais escuros
+        undercurl = true,  -- sublinhar subdiagnósticos
+        background = true,  -- usar fundo escuro para diagnósticos
+    },
+}
+
+-- Aplicar o tema
+require('onedark').load()
+EOF
+
