@@ -1,0 +1,85 @@
+[env]
+TERM = "xterm-256color"
+
+[window]
+decorations = "buttonless"
+dynamic_padding = false
+opacity = 0.95
+
+[window.dimensions]
+columns = 80
+lines = 25
+
+[window.padding]
+x = 10
+y = 10
+
+[font]
+size = 15
+
+[font.normal]
+family = "SauceCodePro Nerd Font"
+style = "Regular"
+
+[font.bold]
+family = "SauceCodePro Nerd Font"
+style = "Bold"
+
+[font.italic]
+family = "SauceCodePro Nerd Font"
+style = "Italic"
+
+[font.bold_italic]
+family = "SauceCodePro Nerd Font"
+style = "Bold Italic"
+
+[general]
+live_config_reload = true
+
+# Configurações de scrollback e rolagem
+[scrolling]
+history = 10000        # Quantidade de linhas armazenadas no buffer de rolagem
+multiplier = 3         # Multiplicador de velocidade da rolagem
+
+# Configurações para seleção de texto
+[selection]
+# Define caracteres que, ao serem clicados, são considerados parte de uma mesma "palavra"
+semantic_escape_chars = " -/\\()\"'`"
+
+# Paleta de cores inspirada no Solarized Dark
+[colors.primary]
+background = "#002b36"
+foreground = "#839496"
+
+[colors.cursor]
+text = "#002b36"
+cursor = "#93a1a1"
+
+[colors.vi_mode_cursor]
+text = "#073642"
+cursor = "#93a1a1"
+
+[colors.selection]
+text = "#073642"
+background = "#93a1a1"
+
+[colors.normal]
+black   = "#073642"
+red     = "#dc322f"
+green   = "#859900"
+yellow  = "#b58900"
+blue    = "#268bd2"
+magenta = "#d33682"
+cyan    = "#2aa198"
+white   = "#eee8d5"
+
+[colors.bright]
+black   = "#002b36"
+red     = "#cb4b16"
+green   = "#586e75"
+yellow  = "#657b83"
+blue    = "#839496"
+magenta = "#6c71c4"
+cyan    = "#93a1a1"
+white   = "#fdf6e3"
+
