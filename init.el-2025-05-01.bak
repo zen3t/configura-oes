@@ -1,0 +1,405 @@
+;;; init.el -*- lexical-binding: t -*-
+;; Emacs do Zero (EDZ) - Configuração por Zé Neto
+
+;; Forçar o Emacs a usar ~/.config/emacs/
+(setq user-emacs-directory "~/.config/emacs/")
+
+;; Desativar linting de pacote para este arquivo
+(with-eval-after-load 'flycheck
+  (setq flycheck-checkers (remove 'emacs-lisp-package flycheck-checkers)))
+
+;; Configurações Gerais
+(setq inhibit-startup-message t)  ; Exemplo de outra configuração
+(setq ring-bell-function 'ignore) ; Desativa o beep sonoro
+(setq visible-bell nil)           ; Desativa o beep visual
+
+;; Configurações Gerais
+(setq inhibit-startup-message t)
+(setq initial-buffer-choice nil)
+(setq initial-major-mode 'fundamental-mode)
+(setq frame-background-mode 'dark)  ; Forçar modo escuro
+
+(menu-bar-mode -1)
+(tool-bar-mode -1)
+(scroll-bar-mode -1)
+(tooltip-mode -1)
+(set-fringe-mode 10)
+(column-number-mode 1)
+(save-place-mode 1)
+(recentf-mode 1)
+(savehist-mode 1)
+
+(global-display-line-numbers-mode 1)
+(setq display-line-numbers-type 'relative)
+(dolist (mode '(org-mode-hook term-mode-hook shell-mode-hook eshell-mode-hook))
+  (add-hook mode (lambda () (display-line-numbers-mode 0))))
+
+(setq-default indent-tabs-mode nil)
+(delete-selection-mode t)
+(global-hl-line-mode 1)
+(global-visual-line-mode t)
+(global-auto-revert-mode t)
+
+(fset 'yes-or-no-p 'y-or-n-p)
+(electric-pair-mode 1)
+
+(global-set-key (kbd "<escape>") 'keyboard-escape-quit)
+(global-set-key (kbd "C-=") 'text-scale-increase)
+(global-set-key (kbd "C--") 'text-scale-decrease)
+
+;; Sistema
+(setq backup-directory-alist '((".*" . "~/.local/share/Trash/files")))
+(setq custom-file (expand-file-name "custom.el" user-emacs-directory))
+(load custom-file 'noerror 'nomessage)
+
+;; Fontes
+(set-face-attribute 'default nil :font "Source Code Pro" :weight 'black :slant 'italic :height 130)
+(set-face-attribute 'variable-pitch nil :font "Source Code Pro" :weight 'black :slant 'italic :height 130)
+(set-face-attribute 'fixed-pitch nil :font "Source Code Pro" :weight 'black :slant 'italic :height 130)
+
+;; Gerenciamento de Pacotes
+(require 'package)
+(setq package-archives '(("melpa" . "https://melpa.org/packages/")
+                         ("elpa" . "https://elpa.gnu.org/packages/")))
+(package-initialize)
+(unless package-archive-contents
+  (package-refresh-contents))
+
+(unless (package-installed-p 'use-package)
+  (package-install 'use-package))
+(require 'use-package)
+(setq use-package-always-ensure t)
+
+;; Evil Mode
+(use-package evil
+  :init
+  (setq evil-want-integration t
+        evil-want-keybinding nil
+        evil-vsplit-window-right t
+        evil-split-window-below t
+        evil-undo-system 'undo-redo)
+  :config
+  (evil-mode 1))
+
+(use-package evil-collection
+  :after evil
+  :config
+  (add-to-list 'evil-collection-mode-list 'help)
+  (evil-collection-init))
+
+;; Vertico
+(use-package vertico
+  :bind (:map vertico-map
+              ("C-j" . vertico-next)
+              ("C-k" . vertico-previous)
+              ("C-f" . vertico-exit)
+              :map minibuffer-local-map
+              ("M-h" . backward-kill-word))
+  :custom
+  (vertico-cycle t)
+  :init
+  (vertico-mode))
+
+;; Marginalia
+(use-package marginalia
+  :after vertico
+  :custom
+  (marginalia-annotators '(marginalia-annotators-heavy marginalia-annotators-light nil))
+  :init
+  (marginalia-mode))
+
+;; Orderless
+(use-package orderless
+  :config
+  (setq completion-styles '(orderless basic)))
+
+;; Consult
+(use-package consult)
+
+;; Which Key
+(use-package which-key
+  :init
+  (which-key-mode 1)
+  :diminish
+  :config
+  (setq which-key-side-window-location 'bottom
+        which-key-sort-order #'which-key-key-order-alpha
+        which-key-allow-imprecise-window-fit nil
+        which-key-sort-uppercase-first nil
+        which-key-add-column-padding 1
+        which-key-max-display-columns nil
+        which-key-min-display-lines 6
+        which-key-side-window-slot -10
+        which-key-side-window-max-height 0.25
+        which-key-idle-delay 0.8
+        which-key-max-description-length 25
+        which-key-separator " → "))
+
+;; Doom Themes
+(use-package doom-themes
+  :ensure t
+  :config
+  (disable-theme 'default)
+  (setq doom-themes-enable-bold t
+        doom-themes-enable-italic t)
+  (load-theme 'doom-gruvbox t)
+  (set-background-color "#282828")
+  (doom-themes-org-config)
+  (add-hook 'org-mode-hook
+            (lambda ()
+              (set-background-color "#282828"))))
+
+;; Doom Modeline
+(use-package doom-modeline
+  :ensure t
+  :hook (after-init . doom-modeline-mode)
+  :custom
+  (doom-modeline-enable-word-count t)
+  :config
+  (set-face-attribute 'mode-line nil :font "Source Code Pro" :weight 'black :slant 'italic :height 130)
+  (set-face-attribute 'mode-line-inactive nil :font "Source Code Pro" :weight 'black :slant 'italic :height 130))
+
+;; Diminish
+(use-package diminish)
+
+;; Company
+(use-package company
+  :ensure t
+  :defer 2
+  :diminish
+  :custom
+  (company-begin-commands '(self-insert-command))
+  (company-idle-delay 0.1)
+  (company-minimum-prefix-length 2)
+  (company-show-numbers t)
+  (company-tooltip-align-annotations t)
+  :config
+  (global-company-mode t))
+
+(use-package company-box
+  :ensure t
+  :after company
+  :diminish
+  :hook (company-mode . company-box-mode))
+
+;; Projectile
+(use-package projectile
+  :ensure t
+  :diminish projectile-mode
+  :config
+  (projectile-mode))
+
+;; Rainbow Delimiters
+(use-package rainbow-delimiters
+  :ensure t
+  :hook ((prog-mode . rainbow-delimiters-mode)
+         (emacs-lisp-mode . rainbow-delimiters-mode)
+         (clojure-mode . rainbow-delimiters-mode)))
+
+;; Treemacs
+(use-package treemacs
+  :ensure t
+  :bind (:map global-map ("M-\\" . treemacs))
+  :config
+  (setq treemacs-no-png-images t
+        treemacs-is-never-other-window nil))
+
+;; Evil Commentary
+(use-package evil-commentary
+  :ensure t
+  :config
+  (evil-commentary-mode))
+
+;; Funções
+(defun ze/reload-settings ()
+  (interactive)
+  (load-file (expand-file-name "init.el" user-emacs-directory)))
+
+(defun ze/open-emacs-config ()
+  (interactive)
+  (find-file (expand-file-name "init.el" user-emacs-directory)))
+
+(defun ze/emacs-personal-files ()
+  (interactive)
+  (let ((default-directory user-emacs-directory))
+    (call-interactively 'find-file)))
+
+(defun ze/open-alacritty ()
+  (interactive)
+  (start-process "alacritty" nil "alacritty"))
+
+;; Atalhos com General
+(use-package general
+  :demand t
+  :after evil
+  :config
+  (general-evil-setup)
+  (general-create-definer ze/leader-keys
+    :states '(normal insert visual emacs)
+    :keymaps 'override
+    :prefix "SPC"
+    :global-prefix "M-SPC")
+  (ze/leader-keys
+    "TAB TAB" '(comment-line :wk "Comment lines")
+    "b" '(:ignore t :wk "Buffers/Bookmarks")
+    "b b" '(switch-to-buffer :wk "Switch to buffer")
+    "b i" '(ibuffer :wk "Ibuffer")
+    "b k" '(kill-current-buffer :wk "Kill current buffer")
+    "b s" '(basic-save-buffer :wk "Save buffer")
+    "b l" '(list-bookmarks :wk "List bookmarks")
+    "b m" '(bookmark-set :wk "Set bookmark")
+    "q q" '(save-buffers-kill-terminal :wk "Quit emacs")
+    "f" '(:ignore t :wk "Files")
+    "." '(find-file :wk "Find file")
+    "f f" '(find-file :wk "Find file")
+    "f p" '(ze/emacs-personal-files :wk "Open personal config files")
+    "f c" '(ze/open-emacs-config :wk "Open emacs init.el")
+    "h" '(:ignore t :wk "Helpers")
+    "h r r" '(ze/reload-settings :wk "Reload emacs settings")
+    "t" '(:ignore t :wk "Terminal")
+    "t t" '(ze/open-alacritty :wk "Open Alacritty")
+    "o" '(:ignore t :wk "Org")
+    "o a" '(org-agenda :wk "Agenda")
+    "o c" '(org-capture :wk "Capture")
+    "w" '(:ignore t :wk "Window")
+    "w q" '(delete-window :wk "Close window")))
+
+;; Mapeamento para fechar o buffer de saída com 'q'
+(with-eval-after-load 'shell
+  (define-key shell-mode-map (kbd "q") 'delete-window))
+
+;; Org Mode
+(use-package org
+  :hook (org-mode . (lambda ()
+                      (org-indent-mode 1)
+                      (visual-line-mode 1)
+                      (setq-local electric-pair-inhibit-predicate
+                                  `(lambda (c)
+                                     (if (char-equal c ?<) t (,electric-pair-inhibit-predicate c))))))
+  :config
+  (require 'org-tempo)
+  (setq org-edit-src-content-indentation 0)
+  (electric-indent-mode -1)
+  (setq org-agenda-files '("~/org/agenda.org"))
+  (setq org-capture-templates
+        '(("t" "Tarefa" entry (file "~/org/inbox.org")
+           "* TODO %?\n  %u"))))
+
+(use-package org-superstar
+  :ensure t
+  :hook (org-mode . org-superstar-mode)
+  :custom
+  (org-superstar-headline-bullets-list '("▶" "▷" "◆" "◇" "▪" "▪" "▪")))
+
+;; Suporte a C++
+(add-to-list 'auto-mode-alist '("\\.cpp\\'" . c++-mode))
+(add-to-list 'auto-mode-alist '("\\.h\\'" . c++-mode))
+(add-to-list 'auto-mode-alist '("\\.cc\\'" . c++-mode))
+(add-to-list 'auto-mode-alist '("\\.hh\\'" . c++-mode))
+
+(use-package lsp-mode
+  :hook ((c++-mode . lsp-deferred)
+         (python-mode . lsp-deferred)
+         (lsp-mode . lsp-enable-which-key-integration))
+  :commands lsp lsp-deferred
+  :custom
+  (lsp-clients-clangd-executable "clangd")
+  (lsp-headerline-breadcrumb-enable nil)
+  (lsp-idle-delay 0.1)
+  (lsp-log-io nil)
+  (lsp-completion-provider :capf)
+  (lsp-prefer-capf t)
+  (lsp-enable-symbol-highlighting nil)
+  (lsp-enable-on-type-formatting nil)
+  (lsp-enable-indentation nil)
+  (lsp-enable-snippet nil)
+  (lsp-keymap-prefix "C-c l")
+  (lsp-enable-file-watchers t)
+  (lsp-file-watch-threshold 1000)
+  (lsp-prefer-flymake nil)
+  (lsp-file-watch-ignored-directory '("[/\\\\]\\.git$"
+                                      "[/\\\\]\\.venv$"
+                                      "[/\\\\]node_modules$"
+                                      "[/\\\\]\\.cask$"
+                                      "[/\\\\]\\.cache$"
+                                      "[/\\\\]\\.python-version$"
+                                      "[/\\\\]\\.mypy_cache$"
+                                      "[/\\\\]\\.pytest_cache$"
+                                      "[/\\\\]\\.pyre$"
+                                      "[/\\\\]\\.ruff_cache$")))
+
+(use-package flycheck
+  :hook (prog-mode . flycheck-mode))
+
+;; Função para definir o comando de compilação dinamicamente
+(defun ze/set-cpp-compile-command ()
+  (when (eq major-mode 'c++-mode)
+    (let ((file-name (file-name-nondirectory (buffer-file-name))))
+      (setq-local compile-command
+                  (concat "g++ " file-name " -o a.out -Wall -g")))))
+
+(add-hook 'c++-mode-hook 'ze/set-cpp-compile-command)
+
+(global-set-key (kbd "<f5>") 'compile)
+(global-set-key (kbd "<f6>") 'ze/run-cpp-program)
+
+(defun ze/run-cpp-program ()
+  (interactive)
+  (let ((exe (concat default-directory "a.out")))
+    (if (file-exists-p exe)
+        (progn
+          (shell-command (format "chmod +x %s" exe))
+          (let ((buffer (get-buffer-create "*C++ Output*")))
+            (with-current-buffer buffer
+              (erase-buffer))
+            (async-shell-command exe buffer)
+            (pop-to-buffer buffer)
+            (message "Pressione 'q' para fechar o buffer ou 'SPC b k' para matá-lo.")))
+      (message "Executável 'a.out' não encontrado. Compile primeiro com F5!"))))
+
+;; Suporte a Python
+(use-package python-mode
+  :ensure t
+  :hook (python-mode . lsp-deferred)
+  :custom
+  (python-shell-interpreter "python3"))
+
+(use-package blacken
+  :ensure t
+  :hook (python-mode . blacken-mode)
+  :custom
+  (blacken-line-length 88))
+
+(use-package lsp-ui
+  :commands lsp-ui-mode
+  :custom
+  (lsp-ui-doc-enable t)
+  (lsp-ui-doc-header t)
+  (lsp-ui-doc-include-signature t)
+  (lsp-ui-doc-position 'at-point)
+  (lsp-ui-doc-max-width 150)
+  (lsp-ui-doc-max-height 30)
+  (lsp-ui-sideline-enable t)
+  (lsp-ui-sideline-show-hover t)
+  (lsp-ui-sideline-show-diagnostics t)
+  (lsp-ui-sideline-show-code-actions t)
+  (lsp-ui-sideline-ignore-duplicate t))
+
+(use-package lsp-ivy
+  :commands lsp-ivy-workspace-symbol)
+
+(use-package lsp-pyright
+  :ensure t
+  :hook (python-mode . (lambda ()
+                         (require 'lsp-pyright)
+                         (lsp-deferred)))
+  :custom
+  (lsp-pyright-python-executable-cmd "python3"))
+
+;; Salvar Estado da Sessão
+(desktop-save-mode 1)
+(setq desktop-path (list user-emacs-directory))
+(setq desktop-save t)
+(add-hook 'kill-emacs-hook
+          (lambda ()
+            (desktop-save user-emacs-directory)))
