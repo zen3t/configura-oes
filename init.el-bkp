@@ -1,24 +1,30 @@
 ;;; init.el -*- lexical-binding: t -*-
 ;; Emacs do Zero (EDZ) - Configuração por Zé Neto
 
+;; ======================
+;; CONFIGURAÇÕES BÁSICAS
+;; ======================
+
 ;; Forçar o Emacs a usar ~/.config/emacs/
 (setq user-emacs-directory "~/.config/emacs/")
+
+;; Adicionar o diretório do uv ao PATH do Emacs
+(add-to-list 'exec-path "/home/zeneto/.local/bin")
+(setq uv-executable "/home/zeneto/.local/bin/uv")
 
 ;; Desativar linting de pacote para este arquivo
 (with-eval-after-load 'flycheck
   (setq flycheck-checkers (remove 'emacs-lisp-package flycheck-checkers)))
 
 ;; Configurações Gerais
-(setq inhibit-startup-message t)  ; Exemplo de outra configuração
-(setq ring-bell-function 'ignore) ; Desativa o beep sonoro
-(setq visible-bell nil)           ; Desativa o beep visual
-
-;; Configurações Gerais
 (setq inhibit-startup-message t)
+(setq ring-bell-function 'ignore)
+(setq visible-bell nil)
 (setq initial-buffer-choice nil)
 (setq initial-major-mode 'fundamental-mode)
-(setq frame-background-mode 'dark)  ; Forçar modo escuro
+(setq frame-background-mode 'dark)
 
+;; Interface do usuário
 (menu-bar-mode -1)
 (tool-bar-mode -1)
 (scroll-bar-mode -1)
@@ -29,20 +35,22 @@
 (recentf-mode 1)
 (savehist-mode 1)
 
+;; Numeração de linhas
 (global-display-line-numbers-mode 1)
 (setq display-line-numbers-type 'relative)
 (dolist (mode '(org-mode-hook term-mode-hook shell-mode-hook eshell-mode-hook))
   (add-hook mode (lambda () (display-line-numbers-mode 0))))
 
+;; Configurações de edição
 (setq-default indent-tabs-mode nil)
 (delete-selection-mode t)
 (global-hl-line-mode 1)
 (global-visual-line-mode t)
 (global-auto-revert-mode t)
-
 (fset 'yes-or-no-p 'y-or-n-p)
 (electric-pair-mode 1)
 
+;; Atalhos globais
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 (global-set-key (kbd "C-=") 'text-scale-increase)
 (global-set-key (kbd "C--") 'text-scale-decrease)
@@ -53,14 +61,18 @@
 (load custom-file 'noerror 'nomessage)
 
 ;; Fontes
-(set-face-attribute 'default nil :font "Source Code Pro" :weight 'black :slant 'italic :height 130)
-(set-face-attribute 'variable-pitch nil :font "Source Code Pro" :weight 'black :slant 'italic :height 130)
-(set-face-attribute 'fixed-pitch nil :font "Source Code Pro" :weight 'black :slant 'italic :height 130)
+(set-face-attribute 'default nil :font "SauceCodePro Nerd Font" :weight 'black :slant 'italic :height 130)
+(set-face-attribute 'variable-pitch nil :font "SauceCodePro Nerd Font" :weight 'black :slant 'italic :height 130)
+(set-face-attribute 'fixed-pitch nil :font "SauceCodePro Nerd Font" :weight 'black :slant 'italic :height 130)
 
-;; Gerenciamento de Pacotes
+;; ======================
+;; GERENCIAMENTO DE PACOTES
+;; ======================
+
 (require 'package)
 (setq package-archives '(("melpa" . "https://melpa.org/packages/")
-                         ("elpa" . "https://elpa.gnu.org/packages/")))
+                         ("elpa" . "https://elpa.gnu.org/packages/")
+                         ("melpa-stable" . "https://stable.melpa.org/packages/")))
 (package-initialize)
 (unless package-archive-contents
   (package-refresh-contents))
@@ -69,6 +81,10 @@
   (package-install 'use-package))
 (require 'use-package)
 (setq use-package-always-ensure t)
+
+;; ======================
+;; PACOTES PRINCIPAIS
+;; ======================
 
 ;; Evil Mode
 (use-package evil
@@ -120,7 +136,7 @@
 (use-package which-key
   :init
   (which-key-mode 1)
-  :diminish
+  :diminish which-key-mode
   :config
   (setq which-key-side-window-location 'bottom
         which-key-sort-order #'which-key-key-order-alpha
@@ -137,12 +153,11 @@
 
 ;; Doom Themes
 (use-package doom-themes
-  :ensure t
   :config
   (disable-theme 'default)
   (setq doom-themes-enable-bold t
         doom-themes-enable-italic t)
-  (load-theme 'doom-gruvbox t)
+  (load-theme 'doom-dracula t)
   (set-background-color "#282828")
   (doom-themes-org-config)
   (add-hook 'org-mode-hook
@@ -151,54 +166,73 @@
 
 ;; Doom Modeline
 (use-package doom-modeline
-  :ensure t
   :hook (after-init . doom-modeline-mode)
   :custom
   (doom-modeline-enable-word-count t)
   :config
-  (set-face-attribute 'mode-line nil :font "Source Code Pro" :weight 'black :slant 'italic :height 130)
-  (set-face-attribute 'mode-line-inactive nil :font "Source Code Pro" :weight 'black :slant 'italic :height 130))
+  (set-face-attribute 'mode-line nil :font "SauceCodePro Nerd Font" :weight 'black :slant 'italic :height 130)
+  (set-face-attribute 'mode-line-inactive nil :font "SauceCodePro Nerd Font" :weight 'black :slant 'italic :height 130))
 
 ;; Diminish
 (use-package diminish)
 
 ;; Company
 (use-package company
-  :ensure t
   :defer 2
-  :diminish
+  :diminish company-mode
   :custom
   (company-begin-commands '(self-insert-command))
   (company-idle-delay 0.1)
   (company-minimum-prefix-length 2)
   (company-show-numbers t)
   (company-tooltip-align-annotations t)
+  (company-backends '(company-capf
+                      company-keywords
+                      company-files
+                      company-dabbrev
+                      company-abbrev))
   :config
-  (global-company-mode t))
+  (global-company-mode t)
+
+  ;; Configurações específicas para diferentes modos
+  (defun my/html-company-setup ()
+    "Configura backends específicos para HTML."
+    (set (make-local-variable 'company-backends)
+         '((company-capf
+            company-css
+            company-web-html
+            company-files
+            company-dabbrev
+            company-abbrev))))
+
+  ;; Adicionar hook para modos web
+  (add-hook 'html-mode-hook 'my/html-company-setup)
+  (add-hook 'web-mode-hook 'my/html-company-setup))
 
 (use-package company-box
-  :ensure t
   :after company
-  :diminish
-  :hook (company-mode . company-box-mode))
+  :hook (company-mode . company-box-mode)
+  :diminish company-box-mode)
+
+;; Instalar company-web para autocompletar HTML
+(use-package company-web
+  :ensure t
+  :after company)
 
 ;; Projectile
 (use-package projectile
-  :ensure t
   :diminish projectile-mode
   :config
   (projectile-mode))
 
 ;; Rainbow Delimiters
 (use-package rainbow-delimiters
-  :ensure t
   :hook ((prog-mode . rainbow-delimiters-mode)
          (emacs-lisp-mode . rainbow-delimiters-mode)
          (clojure-mode . rainbow-delimiters-mode)))
 
 ;; Treemacs
 (use-package treemacs
-  :ensure t
   :bind (:map global-map ("M-\\" . treemacs))
   :config
   (setq treemacs-no-png-images t
@@ -206,11 +240,50 @@
 
 ;; Evil Commentary
 (use-package evil-commentary
-  :ensure t
+  :after org
   :config
   (evil-commentary-mode))
 
-;; Funções
+;; ======================
+;; DESENVOLVIMENTO WEB
+;; ======================
+
+;; Web Mode
+(use-package web-mode
+  :mode ("\\.html\\'" "\\.htm\\'" "\\.css\\'" "\\.js\\'" "\\.ts\\'" "\\.jsx\\'" "\\.tsx\\'")
+  :config
+  (setq web-mode-markup-indent-offset 2
+        web-mode-css-indent-offset 2
+        web-mode-code-indent-offset 2
+        web-mode-enable-auto-pairing t
+        web-mode-enable-css-colorization t
+        web-mode-content-types-alist '(("jsx" . "\\.js[x]?\\'"))))
+
+;; Emmet Mode
+(use-package emmet-mode
+  :hook ((web-mode . emmet-mode)
+         (html-mode . emmet-mode)
+         (css-mode . emmet-mode)
+         (sgml-mode . emmet-mode)
+         (mhtml-mode . emmet-mode))
+  :config
+  (setq emmet-move-cursor-after-expanding t)
+  (define-key emmet-mode-keymap (kbd "C-j") 'emmet-expand-line))
+
+;; Configuração para HTML mode
+(add-hook 'html-mode-hook
+          (lambda ()
+            (setq indent-tabs-mode nil)
+            (setq tab-width 2)
+            (setq standard-indent 2)
+            (electric-indent-mode 1)
+            (company-mode 1)
+            (show-paren-mode 1)))
+
+;; ======================
+;; FUNÇÕES PERSONALIZADAS
+;; ======================
+
 (defun ze/reload-settings ()
   (interactive)
   (load-file (expand-file-name "init.el" user-emacs-directory)))
@@ -228,7 +301,43 @@
   (interactive)
   (start-process "alacritty" nil "alacritty"))
 
-;; Atalhos com General
+(defun ze/run-python-script ()
+  (interactive)
+  (let ((file-name (buffer-file-name)))
+    (if file-name
+        (progn
+          (save-buffer)
+          (let ((buffer (get-buffer-create "*Python Output*")))
+            (with-current-buffer buffer
+              (erase-buffer))
+            (async-shell-command (concat "python3 " file-name) buffer)
+            (pop-to-buffer buffer)
+            (message "Pressione 'q' para fechar o buffer ou 'SPC b k' para matá-lo.")))
+      (message "Buffer não está associado a um arquivo!"))))
+
+;; Funções para gerenciar o UV
+(defun ze/uv-add-package (pkg)
+  "Adiciona um pacote ao projeto usando UV."
+  (interactive "sNome do pacote para adicionar: ")
+  (let ((default-directory (projectile-project-root)))
+    (compile (format "%s add %s" uv-executable pkg))))
+
+(defun ze/uv-install ()
+  "Instala todas as dependências do projeto usando UV."
+  (interactive)
+  (let ((default-directory (projectile-project-root)))
+    (compile (format "%s install" uv-executable))))
+
+(defun ze/uv-sync ()
+  "Sincroniza o ambiente virtual com o pyproject.toml usando UV."
+  (interactive)
+  (let ((default-directory (projectile-project-root)))
+    (compile (format "%s sync" uv-executable))))
+
+;; ======================
+;; ATALHOS PERSONALIZADOS
+;; ======================
+
 (use-package general
   :demand t
   :after evil
@@ -254,21 +363,76 @@
     "f f" '(find-file :wk "Find file")
     "f p" '(ze/emacs-personal-files :wk "Open personal config files")
     "f c" '(ze/open-emacs-config :wk "Open emacs init.el")
+    "f n" '(ze/create-file :wk "Create file")
+    "f d" '(ze/create-directory :wk "Create directory")
     "h" '(:ignore t :wk "Helpers")
     "h r r" '(ze/reload-settings :wk "Reload emacs settings")
     "t" '(:ignore t :wk "Terminal")
     "t t" '(ze/open-alacritty :wk "Open Alacritty")
+    "t p" '(ze/run-python-script :wk "Run Python script")
     "o" '(:ignore t :wk "Org")
     "o a" '(org-agenda :wk "Agenda")
     "o c" '(org-capture :wk "Capture")
     "w" '(:ignore t :wk "Window")
-    "w q" '(delete-window :wk "Close window")))
+    "w q" '(delete-window :wk "Close window")
+    "p" '(:ignore t :wk "Python")
+    "p a" '(ze/uv-add-package :wk "UV: Add package")
+    "p i" '(ze/uv-install :wk "UV: Install deps")
+    "p s" '(ze/uv-sync :wk "UV: Sync env")
+    "p v" '(pyvenv-workon :wk "Switch venv")))
+;; ======================
+;; GERENCIAMENTO DE JANELAS E ABAS
+;; ======================
 
+;; Ativar modo de abas
+(tab-bar-mode 1)
+
+;; Configurar abas
+(setq tab-bar-format '(tab-bar-format-tabs tab-bar-format-align-right tab-bar-format-global))
+(setq tab-bar-show 1)
+(setq tab-bar-close-button-show nil)
+
+;; Atalhos para windows e tabs
+(ze/leader-keys
+  ;; Windows (janelas)
+  "w" '(:ignore t :wk "Window")
+  "w s" '(split-window-below :wk "Split horizontal")
+  "w v" '(split-window-right :wk "Split vertical")
+  "w o" '(delete-other-windows :wk "Keep only this")
+  "w q" '(delete-window :wk "Close window")
+  "w h" '(windmove-left :wk "Move left")
+  "w j" '(windmove-down :wk "Move down")
+  "w k" '(windmove-up :wk "Move up")
+
+  "w l" '(windmove-right :wk "Move right")
+  "w =" '(balance-windows :wk "Balance windows")
+  
+  ;; Tabs (abas)
+  "t" '(:ignore t :wk "Tabs")
+  "t n" '(tab-bar-new-tab :wk "New tab")
+  "t c" '(tab-bar-close-tab :wk "Close tab")
+  "t ]" '(tab-bar-switch-to-next-tab :wk "Next tab")
+  "t [" '(tab-bar-switch-to-prev-tab :wk "Previous tab")
+  "t 1" '(tab-bar-select-tab :wk "Select tab 1")
+  "t 2" '(tab-bar-select-tab :wk "Select tab 2")
+  "t 3" '(tab-bar-select-tab :wk "Select tab 3")
+  
+  ;; Buffers
+  "b" '(:ignore t :wk "Buffers")
+  "b b" '(switch-to-buffer :wk "Switch buffer")
+  "b n" '(next-buffer :wk "Next buffer")
+  "b p" '(previous-buffer :wk "Previous buffer")
+  "b k" '(kill-this-buffer :wk "Kill buffer")
+  "b K" '(kill-some-buffers :wk "Kill multiple buffers")
+  "b i" '(ibuffer :wk "List buffers"))
 ;; Mapeamento para fechar o buffer de saída com 'q'
 (with-eval-after-load 'shell
   (define-key shell-mode-map (kbd "q") 'delete-window))
 
-;; Org Mode
+;; ======================
+;; ORG MODE
+;; ======================
+
 (use-package org
   :hook (org-mode . (lambda ()
                       (org-indent-mode 1)
@@ -279,19 +443,20 @@
   :config
   (require 'org-tempo)
   (setq org-edit-src-content-indentation 0)
-  (electric-indent-mode -1)
   (setq org-agenda-files '("~/org/agenda.org"))
   (setq org-capture-templates
         '(("t" "Tarefa" entry (file "~/org/inbox.org")
            "* TODO %?\n  %u"))))
 
 (use-package org-superstar
-  :ensure t
   :hook (org-mode . org-superstar-mode)
   :custom
   (org-superstar-headline-bullets-list '("▶" "▷" "◆" "◇" "▪" "▪" "▪")))
 
-;; Suporte a C++
+;; ======================
+;; DESENVOLVIMENTO C++
+;; ======================
+
 (add-to-list 'auto-mode-alist '("\\.cpp\\'" . c++-mode))
 (add-to-list 'auto-mode-alist '("\\.h\\'" . c++-mode))
 (add-to-list 'auto-mode-alist '("\\.cc\\'" . c++-mode))
@@ -310,8 +475,8 @@
   (lsp-completion-provider :capf)
   (lsp-prefer-capf t)
   (lsp-enable-symbol-highlighting nil)
-  (lsp-enable-on-type-formatting nil)
-  (lsp-enable-indentation nil)
+  (lsp-enable-on-type-formatting t)
+  (lsp-enable-indentation t)
   (lsp-enable-snippet nil)
   (lsp-keymap-prefix "C-c l")
   (lsp-enable-file-watchers t)
@@ -328,6 +493,13 @@
                                       "[/\\\\]\\.pyre$"
                                       "[/\\\\]\\.ruff_cache$")))
 
+(use-package clang-format
+  :hook (c++-mode . (lambda ()
+                      (add-hook 'before-save-hook 'clang-format-buffer nil t)))
+  :config
+  (setq clang-format-style "file"
+        clang-format-executable "clang-format"))
+
 (use-package flycheck
   :hook (prog-mode . flycheck-mode))
 
@@ -339,6 +511,7 @@
                   (concat "g++ " file-name " -o a.out -Wall -g")))))
 
 (add-hook 'c++-mode-hook 'ze/set-cpp-compile-command)
+(add-hook 'c++-mode-hook 'electric-indent-mode)
 
 (global-set-key (kbd "<f5>") 'compile)
 (global-set-key (kbd "<f6>") 'ze/run-cpp-program)
@@ -357,18 +530,46 @@
             (message "Pressione 'q' para fechar o buffer ou 'SPC b k' para matá-lo.")))
       (message "Executável 'a.out' não encontrado. Compile primeiro com F5!"))))
 
-;; Suporte a Python
+;; ======================
+;; DESENVOLVIMENTO PYTHON
+;; ======================
+
 (use-package python-mode
-  :ensure t
   :hook (python-mode . lsp-deferred)
   :custom
   (python-shell-interpreter "python3"))
 
 (use-package blacken
-  :ensure t
-  :hook (python-mode . blacken-mode)
+  :hook (python-mode . (lambda ()
+                         (add-hook 'before-save-hook 'blacken-buffer nil t)))
   :custom
-  (blacken-line-length 88))
+  (blacken-line-length 88)
+  (blacken-executable "black"))
+
+;; Configuração do pyvenv
+(use-package pyvenv
+  :config
+  (require 'wid-edit) ;; Adiciona dependência explícita
+  (setq pyvenv-mode-line-indicator '(pyvenv-virtual-env-name (" [venv:" pyvenv-virtual-env-name "] ")))
+  (pyvenv-mode 1)
+  (defun ze/auto-activate-venv ()
+    (when-let ((venv-dir (locate-dominating-file default-directory ".venv")))
+      (pyvenv-workon (expand-file-name ".venv" venv-dir))))
+  (add-hook 'python-mode-hook #'ze/auto-activate-venv))
+
+  ;; Função para auto-ativar o ambiente virtual
+  (defun ze/auto-activate-venv ()
+    (when-let ((venv-dir (locate-dominating-file default-directory ".venv")))
+      (pyvenv-workon (expand-file-name ".venv" venv-dir))))
+
+  (add-hook 'python-mode-hook #'ze/auto-activate-venv)
+
+(use-package lsp-pyright
+  :hook (python-mode . (lambda ()
+                         (require 'lsp-pyright)
+                         (lsp-deferred)))
+  :custom
+  (lsp-pyright-python-executable-cmd "python"))
 
 (use-package lsp-ui
   :commands lsp-ui-mode
@@ -388,13 +589,26 @@
 (use-package lsp-ivy
   :commands lsp-ivy-workspace-symbol)
 
-(use-package lsp-pyright
-  :ensure t
-  :hook (python-mode . (lambda ()
-                         (require 'lsp-pyright)
-                         (lsp-deferred)))
-  :custom
-  (lsp-pyright-python-executable-cmd "python3"))
+(add-hook 'python-mode-hook 'electric-indent-mode)
+
+;; ======================
+;; FUNÇÕES ADICIONAIS
+;; ======================
+
+(defun ze/create-file ()
+  "Cria um novo arquivo rapidamente."
+  (interactive)
+  (let ((filename (read-file-name "Criar arquivo: ")))
+    (if (file-exists-p filename)
+        (message "Arquivo já existe!")
+      (write-region "" nil filename)
+      (find-file filename))))
+
+(defun ze/create-directory ()
+  "Cria um novo diretório rapidamente."
+  (interactive)
+  (let ((dir (read-directory-name "Criar diretório: ")))
+    (make-directory dir t)))
 
 ;; Salvar Estado da Sessão
 (desktop-save-mode 1)
@@ -403,3 +617,11 @@
 (add-hook 'kill-emacs-hook
           (lambda ()
             (desktop-save user-emacs-directory)))
+
+;; ======================
+;; YASNIPPET
+;; ======================
+
+(use-package yasnippet
+  :config
+ 
