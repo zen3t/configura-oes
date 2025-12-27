@@ -2,29 +2,41 @@
 ;; Emacs do Zero (EDZ) - Configuração por Zé Neto
 
 ;; ======================
+;; OTIMIZAÇÃO DE STARTUP
+;; ======================
+
+(setq gc-cons-threshold most-positive-fixnum
+      gc-cons-percentage 0.6)
+
+(defvar my/startup-start-time (current-time))
+
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (setq gc-cons-threshold 100000000   ; 100 MB
+                  gc-cons-percentage 0.1)
+            (message "Emacs carregou em %.2f segundos com %d GCs."
+                     (float-time (time-subtract (current-time) my/startup-start-time))
+                     gcs-done)))
+
+;; ======================
 ;; CONFIGURAÇÕES BÁSICAS
 ;; ======================
 
-;; Forçar o Emacs a usar ~/.config/emacs/
 (setq user-emacs-directory "~/.config/emacs/")
 
-;; Adicionar o diretório do uv ao PATH do Emacs
 (add-to-list 'exec-path "/home/zeneto/.local/bin")
 (setq uv-executable "/home/zeneto/.local/bin/uv")
 
-;; Desativar linting de pacote para este arquivo
 (with-eval-after-load 'flycheck
   (setq flycheck-checkers (remove 'emacs-lisp-package flycheck-checkers)))
 
-;; Configurações Gerais
-(setq inhibit-startup-message t)
-(setq ring-bell-function 'ignore)
-(setq visible-bell nil)
-(setq initial-buffer-choice nil)
-(setq initial-major-mode 'fundamental-mode)
-(setq frame-background-mode 'dark)
+(setq inhibit-startup-message t
+      ring-bell-function 'ignore
+      visible-bell nil
+      initial-buffer-choice nil
+      initial-major-mode 'fundamental-mode
+      frame-background-mode 'dark)
 
-;; Interface do usuário
 (menu-bar-mode -1)
 (tool-bar-mode -1)
 (scroll-bar-mode -1)
@@ -35,13 +47,11 @@
 (recentf-mode 1)
 (savehist-mode 1)
 
-;; Numeração de linhas
 (global-display-line-numbers-mode 1)
 (setq display-line-numbers-type 'relative)
 (dolist (mode '(org-mode-hook term-mode-hook shell-mode-hook eshell-mode-hook))
   (add-hook mode (lambda () (display-line-numbers-mode 0))))
 
-;; Configurações de edição
 (setq-default indent-tabs-mode nil)
 (delete-selection-mode t)
 (global-hl-line-mode 1)
@@ -50,17 +60,14 @@
 (fset 'yes-or-no-p 'y-or-n-p)
 (electric-pair-mode 1)
 
-;; Atalhos globais
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 (global-set-key (kbd "C-=") 'text-scale-increase)
 (global-set-key (kbd "C--") 'text-scale-decrease)
 
-;; Sistema
 (setq backup-directory-alist '((".*" . "~/.local/share/Trash/files")))
 (setq custom-file (expand-file-name "custom.el" user-emacs-directory))
 (load custom-file 'noerror 'nomessage)
 
-;; Fontes
 (set-face-attribute 'default nil :font "SauceCodePro Nerd Font" :weight 'black :slant 'italic :height 130)
 (set-face-attribute 'variable-pitch nil :font "SauceCodePro Nerd Font" :weight 'black :slant 'italic :height 130)
 (set-face-attribute 'fixed-pitch nil :font "SauceCodePro Nerd Font" :weight 'black :slant 'italic :height 130)
@@ -74,6 +81,7 @@
                          ("elpa" . "https://elpa.gnu.org/packages/")
                          ("melpa-stable" . "https://stable.melpa.org/packages/")))
 (package-initialize)
+
 (unless package-archive-contents
   (package-refresh-contents))
 
@@ -86,7 +94,6 @@
 ;; PACOTES PRINCIPAIS
 ;; ======================
 
-;; Evil Mode
 (use-package evil
   :init
   (setq evil-want-integration t
@@ -98,12 +105,12 @@
   (evil-mode 1))
 
 (use-package evil-collection
+  :defer t
   :after evil
   :config
   (add-to-list 'evil-collection-mode-list 'help)
   (evil-collection-init))
 
-;; Vertico
 (use-package vertico
   :bind (:map vertico-map
               ("C-j" . vertico-next)
@@ -116,23 +123,19 @@
   :init
   (vertico-mode))
 
-;; Marginalia
 (use-package marginalia
+  :defer t
   :after vertico
-  :custom
-  (marginalia-annotators '(marginalia-annotators-heavy marginalia-annotators-light nil))
   :init
   (marginalia-mode))
 
-;; Orderless
 (use-package orderless
+  :defer t
   :config
   (setq completion-styles '(orderless basic)))
 
-;; Consult
-(use-package consult)
+(use-package consult :defer t)
 
-;; Which Key
 (use-package which-key
   :init
   (which-key-mode 1)
@@ -151,95 +154,73 @@
         which-key-max-description-length 25
         which-key-separator " → "))
 
-;; Doom Themes
 (use-package doom-themes
+  :defer t
   :config
-  (disable-theme 'default)
-  (setq doom-themes-enable-bold t
-        doom-themes-enable-italic t)
   (load-theme 'doom-dracula t)
-  (set-background-color "#282828")
-  (doom-themes-org-config)
-  (add-hook 'org-mode-hook
-            (lambda ()
-              (set-background-color "#282828"))))
+  (doom-themes-visual-bell-config)
+  (doom-themes-org-config))
 
-;; Doom Modeline
 (use-package doom-modeline
-  :hook (after-init . doom-modeline-mode)
+  :init (doom-modeline-mode 1)
   :custom
-  (doom-modeline-enable-word-count t)
+  (doom-modeline-enable-word-count nil)
   :config
   (set-face-attribute 'mode-line nil :font "SauceCodePro Nerd Font" :weight 'black :slant 'italic :height 130)
   (set-face-attribute 'mode-line-inactive nil :font "SauceCodePro Nerd Font" :weight 'black :slant 'italic :height 130))
 
-;; Diminish
-(use-package diminish)
+(use-package diminish :defer t)
 
-;; Company
 (use-package company
-  :defer 2
-  :diminish company-mode
+  :defer t
+  :diminish
   :custom
-  (company-begin-commands '(self-insert-command))
   (company-idle-delay 0.1)
   (company-minimum-prefix-length 2)
   (company-show-numbers t)
   (company-tooltip-align-annotations t)
-  (company-backends '(company-capf
-                      company-keywords
-                      company-files
-                      company-dabbrev
-                      company-abbrev))
   :config
-  (global-company-mode t)
-
-  ;; Configurações específicas para diferentes modos
-  (defun my/html-company-setup ()
-    "Configura backends específicos para HTML."
-    (set (make-local-variable 'company-backends)
-         '((company-capf
-            company-css
-            company-web-html
-            company-files
-            company-dabbrev
-            company-abbrev))))
-
-  ;; Adicionar hook para modos web
-  (add-hook 'html-mode-hook 'my/html-company-setup)
-  (add-hook 'web-mode-hook 'my/html-company-setup))
+  (global-company-mode t))
 
 (use-package company-box
+  :defer t
   :after company
   :hook (company-mode . company-box-mode)
-  :diminish company-box-mode)
+  :diminish)
 
-;; Instalar company-web para autocompletar HTML
-(use-package company-web
-  :ensure t
-  :after company)
-
-;; Projectile
 (use-package projectile
-  :diminish projectile-mode
+  :defer t
+  :diminish
   :config
-  (projectile-mode))
+  (projectile-mode 1))
 
-;; Rainbow Delimiters
 (use-package rainbow-delimiters
+  :defer t
   :hook ((prog-mode . rainbow-delimiters-mode)
          (emacs-lisp-mode . rainbow-delimiters-mode)
          (clojure-mode . rainbow-delimiters-mode)))
 
-;; Treemacs
 (use-package treemacs
-  :bind (:map global-map ("M-\\" . treemacs))
+  :defer t
+  :bind ("M-\\" . treemacs)
   :config
   (setq treemacs-no-png-images t
         treemacs-is-never-other-window nil))
 
-;; Evil Commentary
+(use-package general
+  :demand t
+  :after evil
+  :config
+  (general-evil-setup t))
+
+(general-create-definer ze/leader-keys
+  :states '(normal insert visual emacs)
+  :keymaps 'override
+  :prefix "SPC"
+  :global-prefix "M-SPC")
+
 (use-package evil-commentary
+  :defer t
   :after org
   :config
   (evil-commentary-mode))
@@ -248,37 +229,87 @@
 ;; DESENVOLVIMENTO WEB
 ;; ======================
 
-;; Web Mode
 (use-package web-mode
-  :mode ("\\.html\\'" "\\.htm\\'" "\\.css\\'" "\\.js\\'" "\\.ts\\'" "\\.jsx\\'" "\\.tsx\\'")
+  :defer t
+  :mode (("\\.html?\\'" . web-mode)
+         ("\\.jsx\\'" . web-mode)
+         ("\\.tsx\\'" . web-mode)
+         ("\\.vue\\'" . web-mode))
+  :custom
+  (web-mode-markup-indent-offset 2)
+  (web-mode-css-indent-offset 2)
+  (web-mode-code-indent-offset 2)
+  (web-mode-enable-auto-pairing t)
+  (web-mode-enable-css-colorization t)
+  (web-mode-enable-current-element-highlight t)
   :config
-  (setq web-mode-markup-indent-offset 2
-        web-mode-css-indent-offset 2
-        web-mode-code-indent-offset 2
-        web-mode-enable-auto-pairing t
-        web-mode-enable-css-colorization t
-        web-mode-content-types-alist '(("jsx" . "\\.js[x]?\\'"))))
+  (add-to-list 'web-mode-content-types-alist '("jsx" . "\\.jsx?\\'"))
+  (add-to-list 'web-mode-content-types-alist '("tsx" . "\\.tsx\\'")))
 
-;; Emmet Mode
 (use-package emmet-mode
-  :hook ((web-mode . emmet-mode)
-         (html-mode . emmet-mode)
-         (css-mode . emmet-mode)
-         (sgml-mode . emmet-mode)
-         (mhtml-mode . emmet-mode))
-  :config
-  (setq emmet-move-cursor-after-expanding t)
-  (define-key emmet-mode-keymap (kbd "C-j") 'emmet-expand-line))
+  :defer t
+  :hook ((web-mode css-mode sgml-mode) . emmet-mode)
+  :custom
+  (emmet-expand-jsx-className? t)
+  :bind (:map emmet-mode-keymap
+              ("C-j" . emmet-expand-line)
+              ("C-c C-j" . emmet-next-edit-point)
+              ("C-c C-k" . emmet-prev-edit-point)))
 
-;; Configuração para HTML mode
-(add-hook 'html-mode-hook
-          (lambda ()
-            (setq indent-tabs-mode nil)
-            (setq tab-width 2)
-            (setq standard-indent 2)
-            (electric-indent-mode 1)
-            (company-mode 1)
-            (show-paren-mode 1)))
+(use-package lsp-mode
+  :defer t
+  :commands (lsp lsp-deferred)
+  :hook ((web-mode html-mode css-mode js-mode typescript-mode
+          c++-mode python-mode) . lsp-deferred)
+  :custom
+  (lsp-enable-snippet nil)
+  (lsp-idle-delay 0.5)
+  (lsp-enable-file-watchers nil)
+  (lsp-headerline-breadcrumb-enable nil)
+  (lsp-enable-symbol-highlighting nil)
+  (lsp-enable-on-type-formatting t)
+  (lsp-enable-indentation t)
+  (lsp-prefer-capf t)
+  (lsp-keymap-prefix "C-c l")
+  :config
+  (lsp-register-client
+   (make-lsp-client :new-connection (lsp-stdio-connection '("html-languageserver" "--stdio"))
+                    :major-modes '(html-mode web-mode)
+                    :server-id 'html-ls))
+  (lsp-register-client
+   (make-lsp-client :new-connection (lsp-stdio-connection '("css-languageserver" "--stdio"))
+                    :major-modes '(css-mode)
+                    :server-id 'css-ls))
+  (lsp-register-client
+   (make-lsp-client :new-connection (lsp-stdio-connection '("emmet-ls" "--stdio"))
+                    :major-modes '(html-mode web-mode css-mode)
+                    :server-id 'emmet-ls))
+  (lsp-enable-which-key-integration))
+
+(use-package apheleia
+  :defer t
+  :config
+  (apheleia-global-mode +1)
+  (setf (alist-get 'prettier apheleia-formatters)
+        '("prettier" "--stdin" "--stdin-filepath" filepath))
+  (dolist (mode '(web-mode css-mode js-mode typescript-mode html-mode))
+    (setf (alist-get mode apheleia-mode-alist) '(prettier))))
+
+(use-package lsp-ui
+  :defer t
+  :commands lsp-ui-mode
+  :custom
+  (lsp-ui-doc-enable t)
+  (lsp-ui-doc-header t)
+  (lsp-ui-doc-include-signature t)
+  (lsp-ui-doc-position 'at-point)
+  (lsp-ui-doc-max-width 150)
+  (lsp-ui-doc-max-height 30)
+  (lsp-ui-sideline-enable t)
+  (lsp-ui-sideline-show-hover t)
+  (lsp-ui-sideline-show-diagnostics t)
+  (lsp-ui-sideline-show-code-actions t)
+  (lsp-ui-sideline-ignore-duplicate t))
 
 ;; ======================
 ;; FUNÇÕES PERSONALIZADAS
@@ -315,7 +346,6 @@
             (message "Pressione 'q' para fechar o buffer ou 'SPC b k' para matá-lo.")))
       (message "Buffer não está associado a um arquivo!"))))
 
-;; Funções para gerenciar o UV
 (defun ze/uv-add-package (pkg)
   "Adiciona um pacote ao projeto usando UV."
   (interactive "sNome do pacote para adicionar: ")
@@ -334,267 +364,6 @@
   (let ((default-directory (projectile-project-root)))
     (compile (format "%s sync" uv-executable))))
 
-;; ======================
-;; ATALHOS PERSONALIZADOS
-;; ======================
-
-(use-package general
-  :demand t
-  :after evil
-  :config
-  (general-evil-setup)
-  (general-create-definer ze/leader-keys
-    :states '(normal insert visual emacs)
-    :keymaps 'override
-    :prefix "SPC"
-    :global-prefix "M-SPC")
-  (ze/leader-keys
-    "TAB TAB" '(comment-line :wk "Comment lines")
-    "b" '(:ignore t :wk "Buffers/Bookmarks")
-    "b b" '(switch-to-buffer :wk "Switch to buffer")
-    "b i" '(ibuffer :wk "Ibuffer")
-    "b k" '(kill-current-buffer :wk "Kill current buffer")
-    "b s" '(basic-save-buffer :wk "Save buffer")
-    "b l" '(list-bookmarks :wk "List bookmarks")
-    "b m" '(bookmark-set :wk "Set bookmark")
-    "q q" '(save-buffers-kill-terminal :wk "Quit emacs")
-    "f" '(:ignore t :wk "Files")
-    "." '(find-file :wk "Find file")
-    "f f" '(find-file :wk "Find file")
-    "f p" '(ze/emacs-personal-files :wk "Open personal config files")
-    "f c" '(ze/open-emacs-config :wk "Open emacs init.el")
-    "f n" '(ze/create-file :wk "Create file")
-    "f d" '(ze/create-directory :wk "Create directory")
-    "h" '(:ignore t :wk "Helpers")
-    "h r r" '(ze/reload-settings :wk "Reload emacs settings")
-    "t" '(:ignore t :wk "Terminal")
-    "t t" '(ze/open-alacritty :wk "Open Alacritty")
-    "t p" '(ze/run-python-script :wk "Run Python script")
-    "o" '(:ignore t :wk "Org")
-    "o a" '(org-agenda :wk "Agenda")
-    "o c" '(org-capture :wk "Capture")
-    "w" '(:ignore t :wk "Window")
-    "w q" '(delete-window :wk "Close window")
-    "p" '(:ignore t :wk "Python")
-    "p a" '(ze/uv-add-package :wk "UV: Add package")
-    "p i" '(ze/uv-install :wk "UV: Install deps")
-    "p s" '(ze/uv-sync :wk "UV: Sync env")
-    "p v" '(pyvenv-workon :wk "Switch venv")))
-;; ======================
-;; GERENCIAMENTO DE JANELAS E ABAS
-;; ======================
-
-;; Ativar modo de abas
-(tab-bar-mode 1)
-
-;; Configurar abas
-(setq tab-bar-format '(tab-bar-format-tabs tab-bar-format-align-right tab-bar-format-global))
-(setq tab-bar-show 1)
-(setq tab-bar-close-button-show nil)
-
-;; Atalhos para windows e tabs
-(ze/leader-keys
-  ;; Windows (janelas)
-  "w" '(:ignore t :wk "Window")
-  "w s" '(split-window-below :wk "Split horizontal")
-  "w v" '(split-window-right :wk "Split vertical")
-  "w o" '(delete-other-windows :wk "Keep only this")
-  "w q" '(delete-window :wk "Close window")
-  "w h" '(windmove-left :wk "Move left")
-  "w j" '(windmove-down :wk "Move down")
-  "w k" '(windmove-up :wk "Move up")
-
-  "w l" '(windmove-right :wk "Move right")
-  "w =" '(balance-windows :wk "Balance windows")
-  
-  ;; Tabs (abas)
-  "t" '(:ignore t :wk "Tabs")
-  "t n" '(tab-bar-new-tab :wk "New tab")
-  "t c" '(tab-bar-close-tab :wk "Close tab")
-  "t ]" '(tab-bar-switch-to-next-tab :wk "Next tab")
-  "t [" '(tab-bar-switch-to-prev-tab :wk "Previous tab")
-  "t 1" '(tab-bar-select-tab :wk "Select tab 1")
-  "t 2" '(tab-bar-select-tab :wk "Select tab 2")
-  "t 3" '(tab-bar-select-tab :wk "Select tab 3")
-  
-  ;; Buffers
-  "b" '(:ignore t :wk "Buffers")
-  "b b" '(switch-to-buffer :wk "Switch buffer")
-  "b n" '(next-buffer :wk "Next buffer")
-  "b p" '(previous-buffer :wk "Previous buffer")
-  "b k" '(kill-this-buffer :wk "Kill buffer")
-  "b K" '(kill-some-buffers :wk "Kill multiple buffers")
-  "b i" '(ibuffer :wk "List buffers"))
-;; Mapeamento para fechar o buffer de saída com 'q'
-(with-eval-after-load 'shell
-  (define-key shell-mode-map (kbd "q") 'delete-window))
-
-;; ======================
-;; ORG MODE
-;; ======================
-
-(use-package org
-  :hook (org-mode . (lambda ()
-                      (org-indent-mode 1)
-                      (visual-line-mode 1)
-                      (setq-local electric-pair-inhibit-predicate
-                                  `(lambda (c)
-                                     (if (char-equal c ?<) t (,electric-pair-inhibit-predicate c))))))
-  :config
-  (require 'org-tempo)
-  (setq org-edit-src-content-indentation 0)
-  (setq org-agenda-files '("~/org/agenda.org"))
-  (setq org-capture-templates
-        '(("t" "Tarefa" entry (file "~/org/inbox.org")
-           "* TODO %?\n  %u"))))
-
-(use-package org-superstar
-  :hook (org-mode . org-superstar-mode)
-  :custom
-  (org-superstar-headline-bullets-list '("▶" "▷" "◆" "◇" "▪" "▪" "▪")))
-
-;; ======================
-;; DESENVOLVIMENTO C++
-;; ======================
-
-(add-to-list 'auto-mode-alist '("\\.cpp\\'" . c++-mode))
-(add-to-list 'auto-mode-alist '("\\.h\\'" . c++-mode))
-(add-to-list 'auto-mode-alist '("\\.cc\\'" . c++-mode))
-(add-to-list 'auto-mode-alist '("\\.hh\\'" . c++-mode))
-
-(use-package lsp-mode
-  :hook ((c++-mode . lsp-deferred)
-         (python-mode . lsp-deferred)
-         (lsp-mode . lsp-enable-which-key-integration))
-  :commands lsp lsp-deferred
-  :custom
-  (lsp-clients-clangd-executable "clangd")
-  (lsp-headerline-breadcrumb-enable nil)
-  (lsp-idle-delay 0.1)
-  (lsp-log-io nil)
-  (lsp-completion-provider :capf)
-  (lsp-prefer-capf t)
-  (lsp-enable-symbol-highlighting nil)
-  (lsp-enable-on-type-formatting t)
-  (lsp-enable-indentation t)
-  (lsp-enable-snippet nil)
-  (lsp-keymap-prefix "C-c l")
-  (lsp-enable-file-watchers t)
-  (lsp-file-watch-threshold 1000)
-  (lsp-prefer-flymake nil)
-  (lsp-file-watch-ignored-directory '("[/\\\\]\\.git$"
-                                      "[/\\\\]\\.venv$"
-                                      "[/\\\\]node_modules$"
-                                      "[/\\\\]\\.cask$"
-                                      "[/\\\\]\\.cache$"
-                                      "[/\\\\]\\.python-version$"
-                                      "[/\\\\]\\.mypy_cache$"
-                                      "[/\\\\]\\.pytest_cache$"
-                                      "[/\\\\]\\.pyre$"
-                                      "[/\\\\]\\.ruff_cache$")))
-
-(use-package clang-format
-  :hook (c++-mode . (lambda ()
-                      (add-hook 'before-save-hook 'clang-format-buffer nil t)))
-  :config
-  (setq clang-format-style "file"
-        clang-format-executable "clang-format"))
-
-(use-package flycheck
-  :hook (prog-mode . flycheck-mode))
-
-;; Função para definir o comando de compilação dinamicamente
-(defun ze/set-cpp-compile-command ()
-  (when (eq major-mode 'c++-mode)
-    (let ((file-name (file-name-nondirectory (buffer-file-name))))
-      (setq-local compile-command
-                  (concat "g++ " file-name " -o a.out -Wall -g")))))
-
-(add-hook 'c++-mode-hook 'ze/set-cpp-compile-command)
-(add-hook 'c++-mode-hook 'electric-indent-mode)
-
-(global-set-key (kbd "<f5>") 'compile)
-(global-set-key (kbd "<f6>") 'ze/run-cpp-program)
-
-(defun ze/run-cpp-program ()
-  (interactive)
-  (let ((exe (concat default-directory "a.out")))
-    (if (file-exists-p exe)
-        (progn
-          (shell-command (format "chmod +x %s" exe))
-          (let ((buffer (get-buffer-create "*C++ Output*")))
-            (with-current-buffer buffer
-              (erase-buffer))
-            (async-shell-command exe buffer)
-            (pop-to-buffer buffer)
-            (message "Pressione 'q' para fechar o buffer ou 'SPC b k' para matá-lo.")))
-      (message "Executável 'a.out' não encontrado. Compile primeiro com F5!"))))
-
-;; ======================
-;; DESENVOLVIMENTO PYTHON
-;; ======================
-
-(use-package python-mode
-  :hook (python-mode . lsp-deferred)
-  :custom
-  (python-shell-interpreter "python3"))
-
-(use-package blacken
-  :hook (python-mode . (lambda ()
-                         (add-hook 'before-save-hook 'blacken-buffer nil t)))
-  :custom
-  (blacken-line-length 88)
-  (blacken-executable "black"))
-
-;; Configuração do pyvenv
-(use-package pyvenv
-  :config
-  (require 'wid-edit) ;; Adiciona dependência explícita
-  (setq pyvenv-mode-line-indicator '(pyvenv-virtual-env-name (" [venv:" pyvenv-virtual-env-name "] ")))
-  (pyvenv-mode 1)
-  (defun ze/auto-activate-venv ()
-    (when-let ((venv-dir (locate-dominating-file default-directory ".venv")))
-      (pyvenv-workon (expand-file-name ".venv" venv-dir))))
-  (add-hook 'python-mode-hook #'ze/auto-activate-venv))
-
-  ;; Função para auto-ativar o ambiente virtual
-  (defun ze/auto-activate-venv ()
-    (when-let ((venv-dir (locate-dominating-file default-directory ".venv")))
-      (pyvenv-workon (expand-file-name ".venv" venv-dir))))
-
-  (add-hook 'python-mode-hook #'ze/auto-activate-venv)
-
-(use-package lsp-pyright
-  :hook (python-mode . (lambda ()
-                         (require 'lsp-pyright)
-                         (lsp-deferred)))
-  :custom
-  (lsp-pyright-python-executable-cmd "python"))
-
-(use-package lsp-ui
-  :commands lsp-ui-mode
-  :custom
-  (lsp-ui-doc-enable t)
-  (lsp-ui-doc-header t)
-  (lsp-ui-doc-include-signature t)
-  (lsp-ui-doc-position 'at-point)
-  (lsp-ui-doc-max-width 150)
-  (lsp-ui-doc-max-height 30)
-  (lsp-ui-sideline-enable t)
-  (lsp-ui-sideline-show-hover t)
-  (lsp-ui-sideline-show-diagnostics t)
-  (lsp-ui-sideline-show-code-actions t)
-  (lsp-ui-sideline-ignore-duplicate t))
-
-(use-package lsp-ivy
-  :commands lsp-ivy-workspace-symbol)
-
-(add-hook 'python-mode-hook 'electric-indent-mode)
-
-;; ======================
-;; FUNÇÕES ADICIONAIS
-;; ======================
-
 (defun ze/create-file ()
   "Cria um novo arquivo rapidamente."
   (interactive)
@@ -610,7 +379,188 @@
   (let ((dir (read-directory-name "Criar diretório: ")))
     (make-directory dir t)))
 
-;; Salvar Estado da Sessão
+;; ======================
+;; ATALHOS PERSONALIZADOS
+;; ======================
+
+(ze/leader-keys
+  "TAB TAB" '(comment-line :wk "Comment lines")
+  "w" '(:ignore t :wk "Web")
+  "w e" '(emmet-expand-line :wk "Emmet expand")
+  "b" '(:ignore t :wk "Buffers/Bookmarks")
+  "b b" '(switch-to-buffer :wk "Switch to buffer")
+  "b i" '(ibuffer :wk "Ibuffer")
+  "b k" '(kill-current-buffer :wk "Kill current buffer")
+  "b s" '(basic-save-buffer :wk "Save buffer")
+  "b l" '(list-bookmarks :wk "List bookmarks")
+  "b m" '(bookmark-set :wk "Set bookmark")
+  "q q" '(save-buffers-kill-terminal :wk "Quit emacs")
+  "f" '(:ignore t :wk "Files")
+  "." '(find-file :wk "Find file")
+  "f f" '(find-file :wk "Find file")
+  "f p" '(ze/emacs-personal-files :wk "Open personal config files")
+  "f c" '(ze/open-emacs-config :wk "Open emacs init.el")
+  "h" '(:ignore t :wk "Helpers")
+  "h r r" '(ze/reload-settings :wk "Reload emacs settings")
+  "t" '(:ignore t :wk "Terminal")
+  "t t" '(ze/open-alacritty :wk "Open Alacritty")
+  "t p" '(ze/run-python-script :wk "Run Python script")
+  "o" '(:ignore t :wk "Org")
+  "o a" '(org-agenda :wk "Agenda")
+  "o c" '(org-capture :wk "Capture")
+  "w" '(:ignore t :wk "Window")
+  "w q" '(delete-window :wk "Close window")
+  "p" '(:ignore t :wk "Python")
+  "p a" '(ze/uv-add-package :wk "UV: Add package")
+  "p i" '(ze/uv-install :wk "UV: Install deps")
+  "p s" '(ze/uv-sync :wk "UV: Sync env")
+  "p v" '(pyvenv-workon :wk "Switch venv")
+
+  ;; Janelas e abas
+  "w s" '(split-window-below :wk "Split horizontal")
+  "w v" '(split-window-right :wk "Split vertical")
+  "w o" '(delete-other-windows :wk "Keep only this")
+  "w h" '(windmove-left :wk "Move left")
+  "w j" '(windmove-down :wk "Move down")
+  "w k" '(windmove-up :wk "Move up")
+  "w l" '(windmove-right :wk "Move right")
+  "w =" '(balance-windows :wk "Balance windows")
+  "t n" '(tab-bar-new-tab :wk "New tab")
+  "t c" '(tab-bar-close-tab :wk "Close tab")
+  "t ]" '(tab-bar-switch-to-next-tab :wk "Next tab")
+  "t [" '(tab-bar-switch-to-prev-tab :wk "Previous tab")
+  "t 1" '(tab-bar-select-tab 1 :wk "Select tab 1")
+  "t 2" '(tab-bar-select-tab 2 :wk "Select tab 2")
+  "t 3" '(tab-bar-select-tab 3 :wk "Select tab 3")
+  "b n" '(next-buffer :wk "Next buffer")
+  "b p" '(previous-buffer :wk "Previous buffer")
+  "b K" '(kill-some-buffers :wk "Kill multiple buffers"))
+
+(with-eval-after-load 'shell
+  (define-key shell-mode-map (kbd "q") 'delete-window))
+
+;; ======================
+;; ORG MODE
+;; ======================
+
+(use-package org
+  :defer t
+  :hook (org-mode . (lambda ()
+                      (org-indent-mode 1)
+                      (visual-line-mode 1)
+                      (setq-local electric-pair-inhibit-predicate
+                                  `(lambda (c)
+                                     (if (char-equal c ?<) t (,electric-pair-inhibit-predicate c))))))
+  :config
+  (require 'org-tempo)
+  (setq org-edit-src-content-indentation 0
+        org-agenda-files '("~/org/agenda.org")
+        org-capture-templates
+        '(("t" "Tarefa" entry (file "~/org/inbox.org")
+           "* TODO %?\n  %u"))))
+
+(use-package org-superstar
+  :defer t
+  :hook (org-mode . org-superstar-mode)
+  :custom
+  (org-superstar-headline-bullets-list '("▶" "▷" "◆" "◇" "▪" "▪" "▪")))
+
+;; ======================
+;; C++
+;; ======================
+
+(add-to-list 'auto-mode-alist '("\\.\\(cpp\\|h\\|cc\\|hh\\)\\'" . c++-mode))
+
+(use-package clang-format
+  :defer t
+  :hook (c++-mode . (lambda ()
+                      (add-hook 'before-save-hook 'clang-format-buffer nil t)))
+  :config
+  (setq clang-format-style "file"
+        clang-format-executable "clang-format"))
+
+(defun ze/set-cpp-repeat-command ()
+  (when (eq major-mode 'c++-mode)
+    (let ((file-name (file-name-nondirectory (buffer-file-name))))
+      (setq-local compile-command
+                  (concat "g++ " file-name " -o a.out -Wall -g")))))
+
+(add-hook 'c++-mode-hook 'ze/set-cpp-repeat-command)
+(add-hook 'c++-mode-hook 'electric-indent-mode)
+
+(global-set-key (kbd "<f5>") 'compile)
+
+(defun ze/run-cpp-program ()
+  (interactive)
+  (let ((exe (concat default-directory "a.out")))
+    (if (file-exists-p exe)
+        (progn
+          (shell-command (format "chmod +x %s" exe))
+          (let ((buffer (get-buffer-create "*C++ Output*")))
+            (with-current-buffer buffer
+              (erase-buffer))
+            (async-shell-command exe buffer)
+            (pop-to-buffer buffer)
+            (message "Pressione 'q' para fechar o buffer ou 'SPC b k' para matá-lo.")))
+      (message "Executável 'a.out' não encontrado. Compile primeiro com F5!"))))
+
+(global-set-key (kbd "<f6>") 'ze/run-cpp-program)
+
+;; ======================
+;; PYTHON
+;; ======================
+
+(use-package python-mode
+  :defer t
+  :hook (python-mode . lsp-deferred)
+  :custom
+  (python-shell-interpreter "python3"))
+
+(use-package blacken
+  :defer t
+  :hook (python-mode . (lambda ()
+                         (add-hook 'before-save-hook 'blacken-buffer nil t)))
+  :custom
+  (blacken-line-length 88)
+  (blacken-executable "black"))
+
+(use-package pyvenv
+  :defer t
+  :config
+  (setq pyvenv-mode-line-indicator '(pyvenv-virtual-env-name (" [venv:" pyvenv-virtual-env-name "] ")))
+  (pyvenv-mode 1)
+  (defun ze/auto-activate-venv ()
+    (when-let ((venv-dir (locate-dominating-file default-directory ".venv")))
+      (pyvenv-workon (expand-file-name ".venv" venv-dir))))
+  (add-hook 'python-mode-hook #'ze/auto-activate-venv))
+
+(use-package lsp-pyright
+  :defer t
+  :hook (python-mode . (lambda ()
+                         (require 'lsp-pyright)
+                         (lsp-deferred))))
+
+(add-hook 'python-mode-hook 'electric-indent-mode)
+
+;; ======================
+;; YASNIPPET
+;; ======================
+
+(use-package yasnippet
+  :defer t
+  :config
+  (yas-global-mode 1))
+
+(use-package yasnippet-snippets
+  :defer t
+  :after yasnippet
+  :config
+  (yas-reload-all))
+
+;; ======================
+;; DESKTOP SAVE
+;; ======================
+
 (desktop-save-mode 1)
 (setq desktop-path (list user-emacs-directory))
 (setq desktop-save t)
@@ -619,9 +569,39 @@
             (desktop-save user-emacs-directory)))
 
 ;; ======================
-;; YASNIPPET
+;; CORREÇÃO DEFINITIVA PARA TEMA EM DAEMON/EMACSCLIENT
 ;; ======================
 
-(use-package yasnippet
-  :config
- 
+;; Força todos os frames (incluindo novos clientes) a usarem tema escuro
+(setq frame-background-mode 'dark)
+(when (fboundp 'frame-set-background-mode)
+  (frame-set-background-mode nil))
+
+(defun ze/load-dracula-theme-safely ()
+  "Carrega o tema doom-dracula de forma segura, evitando erros em novos frames."
+  (when (display-graphic-p)
+    ;; Desabilita temas atuais para evitar conflitos
+    (mapc #'disable-theme custom-enabled-themes)
+    ;; Carrega o tema
+    (load-theme 'doom-dracula t)
+    ;; Reaplica configurações visuais
+    (set-face-attribute 'default nil :font "SauceCodePro Nerd Font" :weight 'black :slant 'italic :height 130)
+    (set-face-attribute 'variable-pitch nil :font "SauceCodePro Nerd Font" :weight 'black :slant 'italic :height 130)
+    (set-face-attribute 'fixed-pitch nil :font "SauceCodePro Nerd Font" :weight 'black :slant 'italic :height 130)
+    (set-face-attribute 'mode-line nil :font "SauceCodePro Nerd Font" :weight 'black :slant 'italic :height 130)
+    (set-face-attribute 'mode-line-inactive nil :font "SauceCodePro Nerd Font" :weight 'black :slant 'italic :height 130)
+    ;; Garante doom-modeline ativa
+    (unless (bound-and-true-p doom-modeline-mode)
+      (doom-modeline-mode 1))))
+
+;; Aplica no frame inicial (startup normal ou daemon)
+(ze/load-dracula-theme-safely)
+
+;; Aplica em TODOS os novos frames (o mais importante para emacsclient -c)
+(add-hook 'after-make-frame-functions
+          (lambda (frame)
+            (with-selected-frame frame
+              (ze/load-dracula-theme-safely))))
+
+;; Caso use server (daemon), aplica também depois de criar o frame do cliente
+(add-hook 'server-after-make-frame-hook 'ze/load-dracula-theme-safely)
